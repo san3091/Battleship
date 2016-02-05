@@ -1,11 +1,10 @@
 require './position.rb'
+require './ship.rb'
 require 'pp'
 
 class Grid 
 
 	#inspired by Marjin Haverbeke's Eloquent Javascript Electronic Life project
-
-
 	def initialize(width, height)
 		@spaces = Array.new(width * height) { Position.new }
 		# @space = []
@@ -18,14 +17,14 @@ class Grid
 			w: [-1, 0]
 		}
 	end
-	# position is the object stored inside a space, shich is the array index. 
-	# The grid should take care of seeing whether or not the positions given is inside the grid.
-	def inside? x, y 
-		x > 0 && x < @width && y > 0 && y < @height
+
+	# is the position given inside the grid.
+	def is_inside? x, y 
+		x >= 0 && x < @width && y >= 0 && y < @height
 	end
 
 	# The grid doesn't care about the state of the Position, that's for the position. The grid returns the position object. 
-	def get_space x, y
+	def get_position x, y
 		@spaces[x + (y * @width)]
 	end
 
@@ -35,51 +34,57 @@ class Grid
 
 		@height.times do
 			@width.times do
-				output << (spaces.shift.occupied ? "# " : "& ") #for dev "& ", for prod "  "
+				space = spaces.shift
+				output << (space.occupied && !space.hit ? "# " : "~ ")
 			end
 			output << "\n"
 		end
-		puts output
+		puts output # puts for testing, remember to remove
 	end
 
-	# def place_ship name, length, origin , direction # origins is an array with two items, the x coord at 0 and the y at 1
-	# 	# if they're legal spaces, shovel the position objects into an array, pass it to the ship so it can know the position states.
-	# 	ship_data = { name: name }
-	# 	spaces = []
-	# 	spaces << origin
-	# 	case direction # this is kind of confusing but for now the 0, 0 coord is at the nw corner of the grid. 
-	# 	when :n
-	# 		length.times { spaces << [(origin[0] -= 1), origin[1]] } # I NEED TO DRY THIS UP
-	# 	when :e
-	# 		length.times { spaces << [origin[0], (origin[1] += 1)] }
-	# 	when :s
-	# 		length.times { spaces << [(origin[0] += 1), origin[1]]; p "coord: #{origin[0]}" }
-	# 	when :w
-	# 		length.times { spaces << [origin[0], (origin[1] -= 1)] }
-	# 	end
-	# 	spaces
-	# end
-
-	def place_ship length, origin, direction
+	def place_ship name, length, origin, direction
+		coordinates = []
 		spaces = []
+		# get the transform array from direction symbol
 		transform = @directions[direction]
-		length.times { spaces << [(origin[0] += transform[0]), (origin[1] += transform[1])] }
-		pp spaces
+		# applies the transform (there is an off by one error here because the first position shoveled is transformed before shoveling)
+		length.times { coordinates << [(origin[0] += transform[0]), (origin[1] += transform[1])] }
+		# check if it is out of bounds, if yes return false
+		coordinates.each { |space| return false unless is_inside?(space[0], space[1]) }
+		# create the array with the position objects to pass to the new ship
+		coordinates.each { |space| spaces << get_position(space[0], space[1]) }
+		# instantiate the ship with attributes
+		Ship.new name, spaces
 	end
 
 	def shoot x, y
-		# space = get_space(x, y)
-		# return false if space.hit? 
-		# space.hit = true
-		# return space.occupant if space.occupant
-		# return true
+		space = get_position(x, y)
+		p "coordinates given: #{x}, #{y}"
+		p "space: #{space}"
+		return false if space.hit
+		p "space was not hit before"
+		space.hit = true
+		p "occupied by #{space.occupant || "nobody" }"
+		return space.occupant if space.occupant
+		p "space hit: #{space.hit}"
+		return true
 	end
+
 end
 
-grid = Grid.new(7, 5)
-# grid.make_space
+grid = Grid.new(5, 5)
 # grid.to_s # it works!
-pp grid.place_ship 3, [1, 2], :s
+p grid.get_position 0, 0
+
+# puts grid
+grid.place_ship "Ship", 3, [1, 2], :s
+grid.shoot 0, 0
+grid.shoot 0, 0
+grid.shoot 1, 0
+grid.shoot 1, 0
+grid.shoot 2, 0
+puts grid
+
 
 
 
